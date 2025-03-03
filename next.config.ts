@@ -1,7 +1,5 @@
 const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,  // ESLint 오류 무시
-  },
+  // i18n 설정 제거
 };
 
 export default nextConfig;
