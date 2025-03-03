@@ -1,52 +1,101 @@
-"use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { auth, User } from "@/lib/firebaseConfig";
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
 
-export default function Home() {
-  const [message, setMessage] = useState("");
-  const [response, setResponse] = useState("");
-  const [loading, setLoading] = useState(false);
+export default function Page() {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [isRegistering, setIsRegistering] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [user, setUser] = useState<User | null>(null);
+    const router = useRouter();
 
-  const handleSendMessage = async () => {
-    if (!message.trim()) return;
-    setLoading(true);
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
-      });
-      const data = await res.json();
-      setResponse(data.response);
-    } catch (error) {
-      console.error("Error fetching AI response:", error);
-      setResponse("오류가 발생했습니다. 다시 시도해주세요.");
-    }
-    setLoading(false);
-  };
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+            if (currentUser) {
+                router.push("/");
+            }
+        });
+        return () => unsubscribe();
+    }, [router]);
 
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white p-4">
-      <h1 className="text-2xl font-bold mb-4">AI 연애 상담소 💬</h1>
-      <textarea
-        className="w-full max-w-lg p-2 border border-gray-300 rounded-lg bg-gray-800 text-white"
-        rows={4}
-        placeholder="연애 고민을 입력하세요..."
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-      />
-      <button
-        className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg disabled:opacity-50"
-        onClick={handleSendMessage}
-        disabled={loading}
-      >
-        {loading ? "상담 중..." : "상담하기"}
-      </button>
-      {response && (
-        <div className="mt-4 p-4 bg-gray-800 border border-gray-600 rounded-lg max-w-lg w-full">
-          <strong>AI 답변:</strong>
-          <p>{response}</p>
+    const handleSubmit = async () => {
+        setLoading(true);
+        try {
+            if (isRegistering) {
+                await createUserWithEmailAndPassword(auth, email, password);
+                alert("회원가입 성공!");
+            } else {
+                await signInWithEmailAndPassword(auth, email, password);
+                alert("로그인 성공!");
+            }
+            router.push("/");
+        } catch (error) {
+            console.error(error);
+            alert("오류 발생: " + error.message);
+        }
+        setLoading(false);
+    };
+
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+            alert("로그아웃 되었습니다!");
+            setUser(null);
+            router.push("/login");
+        } catch (error) {
+            console.error("로그아웃 오류:", error);
+        }
+    };
+
+    return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white">
+            {user ? (
+                <div className="text-center">
+                    <h1 className="text-2xl font-bold mb-4">AI 연애 상담소 💬</h1>
+                    <p>로그인된 상태입니다. ({user.email})</p>
+                    <button 
+                        onClick={handleLogout} 
+                        className="mt-4 px-6 py-2 bg-red-500 text-white rounded-lg"
+                    >
+                        로그아웃
+                    </button>
+                </div>
+            ) : (
+                <>
+                    <h1 className="text-2xl font-bold mb-4">{isRegistering ? "회원가입" : "로그인"}</h1>
+                    
+                    <input
+                        type="email"
+                        placeholder="이메일 입력"
+                        className="p-2 border rounded bg-gray-800 text-white w-64"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                    />
+                    
+                    <input
+                        type="password"
+                        placeholder="비밀번호 입력"
+                        className="p-2 border rounded bg-gray-800 text-white w-64 mt-2"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                    />
+                    
+                    <button 
+                        className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg disabled:opacity-50" 
+                        onClick={handleSubmit} 
+                        disabled={loading}
+                    >
+                        {loading ? "처리 중..." : isRegistering ? "회원가입" : "로그인"}
+                    </button>
+                    
+                    <button className="text-sm text-gray-400 mt-2" onClick={() => setIsRegistering(!isRegistering)}>
+                        {isRegistering ? "로그인으로 전환" : "회원가입으로 전환"}
+                    </button>
+                </>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 }
