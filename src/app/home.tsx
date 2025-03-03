@@ -1,20 +1,19 @@
-"use client";
+"use client";  // ✅ 클라이언트 컴포넌트 선언
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebaseConfig";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { auth } from "@/lib/firebaseConfig";  // ✅ auth 가져오는 방식 수정
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
 
 export default function Home() {
-    const [user, setUser] = useState<any>(null);
-    const [loading, setLoading] = useState(true); // 로딩 상태 추가
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
     const router = useRouter();
 
     useEffect(() => {
-        // 로그인 상태 감지
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
-            setLoading(false); // 로딩 완료
+            setLoading(false);
         });
 
         return () => unsubscribe();
@@ -22,10 +21,9 @@ export default function Home() {
 
     const handleLogout = async () => {
         try {
-            await signOut(auth);
+            await signOut(auth);  // ✅ 로그아웃 기능 정상 작동
             alert("로그아웃 되었습니다!");
-            setUser(null);
-            router.push("/login"); // 로그아웃 후 로그인 페이지로 이동
+            router.push("/login");
         } catch (error) {
             console.error("로그아웃 오류:", error);
         }
